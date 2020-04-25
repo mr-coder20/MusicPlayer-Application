@@ -24,6 +24,7 @@ public class MainActivity extends AppCompatActivity {
     private MediaPlayer mediaPlayer;
     private MusicState musicState = MusicState.STOPPED;
     private Timer timer;
+    private int cursor;
 
     enum MusicState {
         PLAYING, PAUSED, STOPPED
@@ -40,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this, RecyclerView.VERTICAL, false));
         recyclerView.setAdapter(new MusicAdapter(musicList));
 
-        onMusicChange(musicList.get(0));
+        onMusicChange(musicList.get(cursor));
         binding.playBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -59,9 +60,21 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        binding.musicSlider.addOnChangeListener(new Slider.OnChangeListener() {
+            @Override
+            public void onValueChange(@NonNull Slider slider, float value, boolean fromUser) {
+                if (fromUser) {
+                    mediaPlayer.seekTo((int) value);
+                    updateUi();
+                }
+            }
+        });
     }
 
     private void onMusicChange(final Music music) {
+        binding.positionTv.setText(Music.convertMillisToString(0));
+        binding.musicSlider.setValue(0);
         mediaPlayer = MediaPlayer.create(this, music.getMusicFileResId());
         mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             @Override
@@ -74,14 +87,14 @@ public class MainActivity extends AppCompatActivity {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                binding.positionTv.setText(Music.convertMillisToString(mediaPlayer.getCurrentPosition()));
-                                binding.musicSlider.setValue(mediaPlayer.getCurrentPosition());
+                                updateUi();
                             }
                         });
 
                     }
                 }, 1000, 1000);
                 binding.durationTv.setText(Music.convertMillisToString(mediaPlayer.getDuration()));
+                binding.musicSlider.setValue(0);
                 binding.musicSlider.setValueTo(mediaPlayer.getDuration());
                 musicState = MusicState.PLAYING;
                 binding.playBtn.setImageResource(R.drawable.ic_pause_24dp);
@@ -92,7 +105,12 @@ public class MainActivity extends AppCompatActivity {
         binding.artistIv.setActualImageResource(music.getArtistResId());
         binding.artistTv.setText(music.getArtist());
         binding.musicNameTv.setText(music.getName());
-
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                goNext();
+            }
+        });
     }
 
 
@@ -102,5 +120,26 @@ public class MainActivity extends AppCompatActivity {
         timer.cancel();
         mediaPlayer.release();
         mediaPlayer = null;
+    }
+
+    private void updateUi() {
+        binding.positionTv.setText(Music.convertMillisToString(mediaPlayer.getCurrentPosition()));
+        binding.musicSlider.setValue(mediaPlayer.getCurrentPosition());
+    }
+
+    private void goNext() {
+        timer.cancel();
+        timer.purge();
+        mediaPlayer.release();
+        if (cursor <= musicList.size())
+            cursor += 1;
+        else
+            cursor = 0;
+
+        onMusicChange(musicList.get(cursor));
+    }
+
+    private void goPrev() {
+
     }
 }
