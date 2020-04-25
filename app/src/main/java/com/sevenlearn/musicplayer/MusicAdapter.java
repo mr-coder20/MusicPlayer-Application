@@ -10,13 +10,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.facebook.drawee.view.SimpleDraweeView;
 
-import org.w3c.dom.Text;
-
 import java.util.List;
 
 public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MusicViewHolder> {
-    private List<Music> musicList = Music.getList();
+    private List<Music> musicList;
 
+    public MusicAdapter(List<Music> musicList) {
+        this.musicList = musicList;
+    }
 
     @NonNull
     @Override
