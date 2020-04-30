@@ -17,13 +17,24 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements MusicAdapter.OnMusicClickListener {
     private ActivityMainBinding binding;
     private List<Music> musicList = Music.getList();
     private MediaPlayer mediaPlayer;
     private MusicState musicState = MusicState.STOPPED;
     private Timer timer;
+    private boolean isDragging;
     private int cursor;
+    private MusicAdapter musicAdapter;
+
+    @Override
+    public void onClick(Music music, int position) {
+        timer.cancel();
+        timer.purge();
+        mediaPlayer.release();
+        cursor = position;
+        onMusicChange(musicList.get(cursor));
+    }
 
     enum MusicState {
         PLAYING, PAUSED, STOPPED
@@ -38,7 +49,8 @@ public class MainActivity extends AppCompatActivity {
 
         RecyclerView recyclerView = findViewById(R.id.rv_main);
         recyclerView.setLayoutManager(new LinearLayoutManager(this, RecyclerView.VERTICAL, false));
-        recyclerView.setAdapter(new MusicAdapter(musicList));
+        musicAdapter = new MusicAdapter(musicList, this);
+        recyclerView.setAdapter(musicAdapter);
 
         onMusicChange(musicList.get(cursor));
         binding.playBtn.setOnClickListener(new View.OnClickListener() {
@@ -63,17 +75,53 @@ public class MainActivity extends AppCompatActivity {
         binding.musicSlider.addOnChangeListener(new Slider.OnChangeListener() {
             @Override
             public void onValueChange(@NonNull Slider slider, float value, boolean fromUser) {
-                if (fromUser) {
-                    mediaPlayer.seekTo((int) value);
-                }
-                binding.positionTv.setText(Music.convertMillisToString(mediaPlayer.getCurrentPosition()));
+                binding.positionTv.setText(Music.convertMillisToString((long) value));
+            }
+        });
+
+        binding.musicSlider.addOnSliderTouchListener(new Slider.OnSliderTouchListener() {
+            @Override
+            public void onStartTrackingTouch(@NonNull Slider slider) {
+                isDragging = true;
+            }
+
+            @Override
+            public void onStopTrackingTouch(@NonNull Slider slider) {
+                isDragging = false;
+                mediaPlayer.seekTo((int) slider.getValue());
+            }
+        });
+
+        binding.nextBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                goNext();
+            }
+        });
+
+        binding.prevBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                goPrev();
             }
         });
     }
 
-    private void onMusicChange(final Music music) {
-        binding.musicSlider.setValue(0);
+    private void goPrev() {
+        timer.cancel();
+        timer.purge();
+        mediaPlayer.release();
+        if (cursor==0){
+            cursor=musicList.size()-1;
+        }else
+            cursor--;
 
+        onMusicChange(musicList.get(cursor));
+    }
+
+    private void onMusicChange(final Music music) {
+        musicAdapter.notifyMusicChange(music);
+        binding.musicSlider.setValue(0);
         mediaPlayer = MediaPlayer.create(this, music.getMusicFileResId());
         mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             @Override
@@ -86,7 +134,8 @@ public class MainActivity extends AppCompatActivity {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                binding.musicSlider.setValue(mediaPlayer.getCurrentPosition());
+                                if (!isDragging)
+                                    binding.musicSlider.setValue(mediaPlayer.getCurrentPosition());
                             }
                         });
 
@@ -96,6 +145,7 @@ public class MainActivity extends AppCompatActivity {
                 binding.musicSlider.setValueTo(mediaPlayer.getDuration());
                 musicState = MusicState.PLAYING;
                 binding.playBtn.setImageResource(R.drawable.ic_pause_24dp);
+
                 mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                     @Override
                     public void onCompletion(MediaPlayer mp) {
@@ -116,19 +166,20 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         timer.cancel();
-        timer.purge();
         mediaPlayer.release();
         mediaPlayer = null;
     }
 
     private void goNext() {
         timer.cancel();
+        timer.purge();
         mediaPlayer.release();
         if (cursor < musicList.size() - 1) {
-            cursor += 1;
+            cursor++;
         } else
             cursor = 0;
 
         onMusicChange(musicList.get(cursor));
     }
+
 }
