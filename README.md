@@ -1,1 +1,1 @@
-![Alt Text](https://media.giphy.com/1.gif)
+![](https://github.com/MusicPlayer-Application/1.gif)
