@@ -1,1 +1,1 @@
-![Now in Android](4.jpg "Now in Android")
+![](http://i.imgur.com/1.gif)
