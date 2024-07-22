@@ -1,1 +1,1 @@
-![Alt Text](https://media.giphy.com/1.gif)
+![Now in Android](4.jpg "Now in Android")
